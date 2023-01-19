@@ -45,6 +45,7 @@ INSTALLED_APPS = [
     'corsheaders',
 
     'findMyDoctor.apps.FindMyDoctorConfig',
+    'django_filters',
 ]
 
 MIDDLEWARE = [
@@ -86,10 +87,8 @@ WSGI_APPLICATION = 'djangoProject.wsgi.application'
 
 DATABASES = {
     'default': {
-        'ENGINE': 'djongo',
-        'NAME': 'mydb',
-        'HOST': 'mongo',
-        'PORT': 27017
+        'ENGINE': 'django.db.backends.sqlite3',
+        'NAME': BASE_DIR / 'db.sqlite3',
     }
 }
 
