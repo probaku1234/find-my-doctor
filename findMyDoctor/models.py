@@ -62,6 +62,6 @@ class TreatmentRequest(models.Model):
     patientId = models.ForeignKey(Patient, blank=False, on_delete=models.CASCADE, related_name='patientId')
     doctorId = models.ForeignKey(Doctor, blank=False, on_delete=models.CASCADE, related_name='doctorId')
     time = models.DateTimeField(blank=False)
-    createdAt = models.DateTimeField(blank=True, default=datetime.now)
+    createdAt = models.DateTimeField(blank=True, auto_now_add=True)
     expiredAt = models.DateTimeField()
     isAccepted = models.BooleanField(blank=False, default=False)

@@ -40,8 +40,12 @@ class DoctorSerializer(serializers.ModelSerializer):
         fields = '__all__'
 
 
+def current_time():
+    return datetime.now()
+
+
 class TreatmentRequestSerializer(serializers.ModelSerializer):
-    createdAt = serializers.HiddenField(default=datetime.now)
+    createdAt = serializers.HiddenField(default=current_time)
     expiredAt = serializers.ReadOnlyField(default=datetime.now)
     isAccepted = serializers.ReadOnlyField(default=False)
     patientName = serializers.SerializerMethodField()
@@ -79,7 +83,8 @@ class TreatmentRequestSerializer(serializers.ModelSerializer):
         lunchTime = validated_data['doctorId'].lunchTime
 
         if lunchTime.start <= createdAt.time() <= lunchTime.end:
-            expired_at = createdAt + timedelta(minutes=15)
+            expired_at = datetime.combine(datetime(createdAt.year, createdAt.month, createdAt.day),
+                                          lunchTime.end) + timedelta(minutes=15)
         else:
             expired_at = createdAt + timedelta(minutes=20)
 

@@ -1,5 +1,7 @@
-from django.shortcuts import render
+from datetime import datetime
 
+from django.shortcuts import render
+from django.utils import timezone
 from rest_framework.response import Response
 from django.http.response import JsonResponse
 from rest_framework.parsers import JSONParser
@@ -34,6 +36,9 @@ class TreatmentRequestViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=['POST'], name='accept-request', serializer_class=TreatmentRequestAcceptSerializer)
     def accept_request(self, request, pk=None):
         treatment_request = TreatmentRequest.objects.get(pk=pk)
+
+        if timezone.make_aware(datetime.now()) > treatment_request.expiredAt:
+            return Response(status=status.HTTP_400_BAD_REQUEST)
 
         treatment_request.isAccepted = True
         treatment_request.save()
