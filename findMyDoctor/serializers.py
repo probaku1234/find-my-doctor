@@ -2,6 +2,7 @@ from rest_framework import serializers
 from findMyDoctor.models import Doctor, Patient, TreatmentRequest, BusinessHour, MedicalDepartment
 from datetime import datetime, timedelta
 
+
 class PatientSerializer(serializers.ModelSerializer):
     class Meta:
         model = Patient
@@ -41,8 +42,16 @@ class DoctorSerializer(serializers.ModelSerializer):
 
 class TreatmentRequestSerializer(serializers.ModelSerializer):
     createdAt = serializers.HiddenField(default=datetime.now)
-    expiredAt = serializers.HiddenField(default=datetime.now)
-    isAccepted = serializers.HiddenField(default=False)
+    expiredAt = serializers.ReadOnlyField(default=datetime.now)
+    isAccepted = serializers.ReadOnlyField(default=False)
+    patientName = serializers.SerializerMethodField()
+    doctorName = serializers.SerializerMethodField()
+
+    def get_patientName(self, obj):
+        return obj.patientId.__str__()
+
+    def get_doctorName(self, obj):
+        return obj.doctorId.__str__()
 
     def validate(self, attrs):
         business_hour = [
@@ -80,3 +89,27 @@ class TreatmentRequestSerializer(serializers.ModelSerializer):
     class Meta:
         model = TreatmentRequest
         fields = '__all__'
+
+
+class TreatmentRequestAcceptSerializer(serializers.ModelSerializer):
+    patientId = serializers.PrimaryKeyRelatedField(read_only=True)
+    time = serializers.DateTimeField(read_only=True)
+    expiredAt = serializers.DateTimeField(read_only=True)
+    patientName = serializers.SerializerMethodField()
+
+    def get_patientName(self, obj):
+        return obj.patientId.__str__()
+
+    def get_fields(self):
+        fields = super().get_fields()
+        return fields
+
+    class Meta:
+        model = TreatmentRequest
+        fields = (
+            'id',
+            'patientId',
+            'time',
+            'expiredAt',
+            'patientName',
+        )
