@@ -21,7 +21,12 @@ class BusinessHour(models.Model):
         else:
             return self.start.__str__() + ' ~ ' + self.end.__str__()
 
-
+    def to_json(self):
+        return {
+            'start': self.start,
+            'end': self.end,
+            'closed': self.closed,
+        }
 class MedicalDepartment(models.Model):
     name = models.CharField(max_length=70, blank=False, default='')
 

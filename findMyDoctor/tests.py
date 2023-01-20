@@ -2,7 +2,7 @@ from rest_framework import status
 from rest_framework.test import APITestCase, APIRequestFactory
 import datetime
 from .views import BusinessHourViewSet, TreatmentRequestViewSet
-from .models import Patient, Doctor, BusinessHour, TreatmentRequest
+from .models import Patient, Doctor, BusinessHour, TreatmentRequest, MedicalDepartment
 from freezegun import freeze_time
 
 
@@ -40,18 +40,23 @@ def create_test_patient(name='test patient'):
     return Patient.objects.create(name=name)
 
 
-def create_test_doctor(name, hospital_name, times):
-    return Doctor.objects.create(name=name,
-                                 hospitalName=hospital_name,
-                                 businessHourMon=times[0],
-                                 businessHourTue=times[1],
-                                 businessHourWed=times[2],
-                                 businessHourThu=times[3],
-                                 businessHourFri=times[4],
-                                 businessHourSat=times[5],
-                                 businessHourSun=times[6],
-                                 lunchTime=times[7],
-                                 )
+def create_test_doctor(name, hospital_name, times, medical_department=[]):
+    doctor = Doctor.objects.create(name=name,
+                                   hospitalName=hospital_name,
+                                   businessHourMon=times[0],
+                                   businessHourTue=times[1],
+                                   businessHourWed=times[2],
+                                   businessHourThu=times[3],
+                                   businessHourFri=times[4],
+                                   businessHourSat=times[5],
+                                   businessHourSun=times[6],
+                                   lunchTime=times[7])
+    doctor.medicalDepartment.add(*medical_department)
+    return doctor
+
+
+def create_department(name):
+    return MedicalDepartment.objects.create(name=name)
 
 
 class TestCaseForTreatmentRequest(APITestCase):
@@ -245,3 +250,196 @@ class TestCaseForTreatmentRequest(APITestCase):
         updated_treatment_request = TreatmentRequest.objects.get(pk=treatment_request.id)
 
         self.assertEqual(updated_treatment_request.isAccepted, False)
+
+
+class TestCaseForSearchDoctorByText(APITestCase):
+    def create_test_doctors(self):
+        business_hour = create_test_business_hour(start=datetime.time(8, 0), end=datetime.time(20, 0),
+                                                  closed=False)
+        lunch_time = create_test_business_hour(start=datetime.time(12, 0), end=datetime.time(1, 0), closed=False)
+        department_1 = create_department('test_department_1')
+        department_2 = create_department('test_department_2')
+        department_3 = create_department('test_department_3')
+
+        doctor_1 = create_test_doctor('test_doctor_1', 'test_hospital_1', [
+            business_hour,
+            business_hour,
+            business_hour,
+            business_hour,
+            business_hour,
+            business_hour,
+            business_hour,
+            lunch_time,
+        ], [department_1])
+        doctor_2 = create_test_doctor('test_doctor_2', 'test_hospital_2', [
+            business_hour,
+            business_hour,
+            business_hour,
+            business_hour,
+            business_hour,
+            business_hour,
+            business_hour,
+            lunch_time,
+        ], [department_1, department_2])
+        doctor_3 = create_test_doctor('test_doctor_3', 'test_hospital_3', [
+            business_hour,
+            business_hour,
+            business_hour,
+            business_hour,
+            business_hour,
+            business_hour,
+            business_hour,
+            lunch_time,
+        ], [department_1, department_2, department_3])
+        return doctor_1, doctor_2, doctor_3, department_1, department_2, department_3
+
+    def test_should_return_with_matching_name(self):
+        doctor_1, doctor_2, doctor_3, _, _, _ = self.create_test_doctors()
+
+        response = self.client.get('/api/doctor/search_by_text', {
+            'query': doctor_1.name
+        })
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data), 1)
+        self.assertEqual(response.data[0]['name'], doctor_1.name)
+
+        response = self.client.get('/api/doctor/search_by_text', {
+            'query': doctor_2.name
+        })
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data), 1)
+        self.assertEqual(response.data[0]['name'], doctor_2.name)
+
+        response = self.client.get('/api/doctor/search_by_text', {
+            'query': doctor_3.name
+        })
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data), 1)
+        self.assertEqual(response.data[0]['name'], doctor_3.name)
+
+    def test_should_return_with_matching_hospital(self):
+        doctor_1, doctor_2, doctor_3, _, _, _ = self.create_test_doctors()
+
+        response = self.client.get('/api/doctor/search_by_text', {
+            'query': doctor_1.hospitalName
+        })
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data), 1)
+        self.assertEqual(response.data[0]['hospitalName'], doctor_1.hospitalName)
+
+        response = self.client.get('/api/doctor/search_by_text', {
+            'query': doctor_2.hospitalName
+        })
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data), 1)
+        self.assertEqual(response.data[0]['hospitalName'], doctor_2.hospitalName)
+
+        response = self.client.get('/api/doctor/search_by_text', {
+            'query': doctor_3.hospitalName
+        })
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data), 1)
+        self.assertEqual(response.data[0]['hospitalName'], doctor_3.hospitalName)
+
+    def test_should_sort_doctor_list_by_matching_level(self):
+        doctor_1, doctor_2, doctor_3, department_1, department_2, department_3 = self.create_test_doctors()
+
+        response = self.client.get('/api/doctor/search_by_text', {
+            'query': '{name} {hospital} {department}'.format(name=doctor_1.name, hospital=doctor_1.hospitalName,
+                                                             department=department_1.name)
+        })
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data), 3)
+        self.assertEqual(response.data[0]['matching_level'], 3)
+        self.assertEqual(response.data[1]['matching_level'], 1)
+        self.assertEqual(response.data[2]['matching_level'], 1)
+
+    def test_should_return_empty_list_when_no_matching_data(self):
+        self.create_test_doctors()
+
+        response = self.client.get('/api/doctor/search_by_text', {
+            'query': 'qweqweqwe'
+        })
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data), 0)
+
+    def test_should_get_all_data_with_no_query(self):
+        self.create_test_doctors()
+
+        response = self.client.get('/api/doctor/search_by_text')
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data), 3)
+
+
+class TestCaseForSearchDoctorByDate(APITestCase):
+    def create_test_doctors(self):
+        business_hour_1 = create_test_business_hour(start=datetime.time(9, 0), end=datetime.time(18, 0),
+                                                    closed=False)
+        business_hour_2 = create_test_business_hour(start=datetime.time(11, 0), end=datetime.time(14, 0),
+                                                    closed=False)
+        no_business = create_test_business_hour(start=datetime.time(11, 0), end=datetime.time(14, 0),
+                                                closed=True)
+        lunch_time = create_test_business_hour(start=datetime.time(12, 0), end=datetime.time(13, 0), closed=False)
+
+        doctor_1 = create_test_doctor('test_doctor_1', 'test_hospital_1', [
+            business_hour_1,
+            business_hour_1,
+            business_hour_1,
+            business_hour_1,
+            business_hour_1,
+            no_business,
+            no_business,
+            lunch_time,
+        ])
+        doctor_2 = create_test_doctor('test_doctor_2', 'test_hospital_2', [
+            business_hour_2,
+            business_hour_2,
+            business_hour_2,
+            business_hour_2,
+            business_hour_2,
+            no_business,
+            no_business,
+            lunch_time,
+        ])
+
+        return doctor_1, doctor_2
+
+    def test_get_doctors_open_at_requested_time(self):
+        doctor_1, doctor_2 = self.create_test_doctors()
+
+        response = self.client.get('/api/doctor/search_by_date', {
+            'requested_time': '2023-01-18 10:00:00'
+        })
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data), 1)
+
+        response = self.client.get('/api/doctor/search_by_date', {
+            'requested_time': '2023-01-18 13:10:00'
+        })
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data), 2)
+
+        response = self.client.get('/api/doctor/search_by_date', {
+            'requested_time': '2023-01-18 20:10:00'
+        })
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data), 0)
+
+    def test_should_not_get_doctor_when_request_time_is_in_lunch_time(self):
+        doctor_1, doctor_2 = self.create_test_doctors()
+
+        response = self.client.get('/api/doctor/search_by_date', {
+            'requested_time': '2023-01-18 12:30:00'
+        })
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data), 0)
+
+    def test_should_throw_error_when_request_time_missing(self):
+        response = self.client.get('/api/doctor/search_by_date')
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)

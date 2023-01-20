@@ -40,6 +40,38 @@ class DoctorSerializer(serializers.ModelSerializer):
         fields = '__all__'
 
 
+class DoctorFilterSerializer(serializers.ModelSerializer):
+    business_hour = serializers.SerializerMethodField()
+    medical_department_list = serializers.SerializerMethodField()
+
+    def get_business_hour(self, obj):
+        return [
+            obj.businessHourMon.to_json(),
+            obj.businessHourTue.to_json(),
+            obj.businessHourWed.to_json(),
+            obj.businessHourThu.to_json(),
+            obj.businessHourFri.to_json(),
+            obj.businessHourSat.to_json(),
+            obj.businessHourSun.to_json(),
+            obj.lunchTime.to_json(),
+        ]
+
+    def get_medical_department_list(self, obj):
+        list = []
+        for i in obj.medicalDepartment.all():
+            list.append(i.__str__())
+        return list
+    class Meta:
+        model = Doctor
+        fields = (
+            'id',
+            'name',
+            'hospitalName',
+            'business_hour',
+            'medicalDepartment',
+            'noImbursedMedicalDepartment',
+            'medical_department_list'
+        )
 def current_time():
     return datetime.now()
 
