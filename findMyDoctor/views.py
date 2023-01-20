@@ -22,7 +22,6 @@ from itertools import filterfalse
 class PatientViewSet(viewsets.ModelViewSet):
     queryset = Patient.objects.all()
     serializer_class = PatientSerializer
-    # http_method_names = ['get', 'post', 'head']
 
 
 class DoctorFilter(filters.FilterSet):
@@ -83,15 +82,21 @@ def is_time_within_business_hour(data, date):
 
     lunch_start = data['business_hour'][7]['start']
     lunch_end = data['business_hour'][7]['end']
-    lunch_start = moment.date(date.year, date.month, date.day).add(hours=lunch_start.hour, minutes=lunch_start.minute, seconds=lunch_start.second)
-    lunch_end = moment.date(date.year, date.month, date.day).add(hours=lunch_end.hour, minutes=lunch_end.minute, seconds=lunch_end.second)
+    lunch_start = moment.date(date.year, date.month, date.day).add(hours=lunch_start.hour, minutes=lunch_start.minute,
+                                                                   seconds=lunch_start.second)
+    lunch_end = moment.date(date.year, date.month, date.day).add(hours=lunch_end.hour, minutes=lunch_end.minute,
+                                                                 seconds=lunch_end.second)
     if date.__ge__(lunch_start) and date.__le__(lunch_end):
         return True
 
     business_start = data['business_hour'][day]['start']
     business_end = data['business_hour'][day]['end']
-    business_start = moment.date(date.year, date.month, date.day).add(hours=business_start.hour, minutes=business_start.minute, seconds=business_start.second)
-    business_end = moment.date(date.year, date.month, date.day).add(hours=business_end.hour, minutes=business_end.minute, seconds=business_end.second)
+    business_start = moment.date(date.year, date.month, date.day).add(hours=business_start.hour,
+                                                                      minutes=business_start.minute,
+                                                                      seconds=business_start.second)
+    business_end = moment.date(date.year, date.month, date.day).add(hours=business_end.hour,
+                                                                    minutes=business_end.minute,
+                                                                    seconds=business_end.second)
     if date.__ge__(moment.date(business_start)) and date.__le__(moment.date(business_end)):
         return False
 
@@ -102,18 +107,19 @@ def is_time_within_business_hour(data, date):
 def search_doctor_by_time(request):
     query_date = request.query_params.get('requested_time')
     if not query_date:
-        return Response(data='parameter requested_time required', status=status.HTTP_400_BAD_REQUEST)
+        return Response(data='파라미터 requested_time가 필요합니다', status=status.HTTP_400_BAD_REQUEST)
 
     try:
         moment.date(request.query_params.get('requested_time'))
     except ValueError:
-        return Response(data='invalid requested_time', status=status.HTTP_400_BAD_REQUEST)
+        return Response(data='형식에 맞지 않는 requested_time 값입니다', status=status.HTTP_400_BAD_REQUEST)
 
     requested_time = moment.date(request.query_params.get('requested_time'))
     doctors = Doctor.objects.all()
     doctors_serializer = DoctorFilterSerializer(doctors, many=True)
 
-    filtered_data = list(filterfalse(lambda x: is_time_within_business_hour(x, requested_time), doctors_serializer.data))
+    filtered_data = list(
+        filterfalse(lambda x: is_time_within_business_hour(x, requested_time), doctors_serializer.data))
 
     return Response(filtered_data)
 

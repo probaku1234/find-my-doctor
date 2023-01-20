@@ -19,14 +19,9 @@ class MedicalDepartmentSerializer(serializers.ModelSerializer):
 
 
 class BusinessHourSerializer(serializers.ModelSerializer):
-    # def validate_empty_values(self, data):
-    #     if data['closed']:
-    #         return (True, data)
-    #     return super().validate_empty_values(data)
-
     def validate(self, attrs):
         if attrs['start'] > attrs['end']:
-            raise serializers.ValidationError('end must after start')
+            raise serializers.ValidationError('끝 시간은 시작 시간보다 커야합니다')
         return attrs
 
     class Meta:
@@ -103,10 +98,10 @@ class TreatmentRequestSerializer(serializers.ModelSerializer):
         day = requested_time.weekday()
 
         if business_hour[day].start > requested_time.time() or requested_time.time() > business_hour[day].end:
-            raise serializers.ValidationError('end must after start')
+            raise serializers.ValidationError('끝 시간은 시작 시간보다 커야합니다')
 
         if attrs['doctorId'].lunchTime.start <= requested_time.time() <= attrs['doctorId'].lunchTime.end:
-            raise serializers.ValidationError('end must after start')
+            raise serializers.ValidationError('끝 시간은 시작 시간보다 커야합니다')
 
         return super().validate(attrs)
 
