@@ -50,6 +50,7 @@ pip install -r requirements.txt
 `http://127.0.0.1:8000/api/business_hour/`
 
 `http://127.0.0.1:8000/api/doctor/` 에서 추가한 시간과 진료과를 고르고 post 버튼을 누르면 새로운 데이터가 삽입됩니다.
+<img width="891" alt="2" src="https://user-images.githubusercontent.com/10219906/213645274-bcdda5ad-a634-4473-8137-d330fc6b5f57.PNG">
 
 
 
