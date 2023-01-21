@@ -56,7 +56,7 @@ class TreatmentRequestViewSet(viewsets.ModelViewSet):
         treatment_request = TreatmentRequest.objects.get(pk=pk)
 
         if timezone.make_aware(datetime.now()) > treatment_request.expiredAt:
-            return Response(status=status.HTTP_400_BAD_REQUEST)
+            return Response(data='요청을 승낙할 수 있는 시간이 지났습니다.', status=status.HTTP_400_BAD_REQUEST)
 
         treatment_request.isAccepted = True
         treatment_request.save()

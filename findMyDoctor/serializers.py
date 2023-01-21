@@ -98,10 +98,10 @@ class TreatmentRequestSerializer(serializers.ModelSerializer):
         day = requested_time.weekday()
 
         if business_hour[day].start > requested_time.time() or requested_time.time() > business_hour[day].end:
-            raise serializers.ValidationError('끝 시간은 시작 시간보다 커야합니다')
+            raise serializers.ValidationError('해당 의사의 영업시간이 아닙니다.')
 
         if attrs['doctorId'].lunchTime.start <= requested_time.time() <= attrs['doctorId'].lunchTime.end:
-            raise serializers.ValidationError('끝 시간은 시작 시간보다 커야합니다')
+            raise serializers.ValidationError('해당 의사의 영업시간이 아닙니다.')
 
         return super().validate(attrs)
 
